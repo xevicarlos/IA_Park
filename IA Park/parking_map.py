@@ -209,13 +209,57 @@ def obtener_ruta(anteriores, destino):
     return ruta
 
 
+
+# ==========================================================
+# ANALIZAR RECORRIDO PARA VER LOS DIFERENTES VALORES EN METROS Y EN FUNCION COSTE (EVALUAR MULTIPLICADORES TIPO RAMPA)
+# ==========================================================
+
+def analizar_recorrido(ruta):
+
+    distancia_fisica = 0
+    coste_ponderado = 0
+    numero_rampas = 0
+
+    # Recorrer cada conexión de la ruta
+    for i in range(len(ruta) - 1):
+
+        nodo_actual = ruta[i]
+        nodo_siguiente = ruta[i + 1]
+
+        # Coste almacenado en el grafo
+        coste_tramo = grafo[nodo_actual][nodo_siguiente]
+
+        coste_ponderado += coste_tramo
+
+        # Identificar si la conexión es una rampa
+        es_rampa = (
+            nodo_actual.startswith("N")
+            and nodo_siguiente.startswith("N")
+            and nodo_actual.split("_")[0]
+                != nodo_siguiente.split("_")[0]
+        )
+
+        if es_rampa:
+
+            numero_rampas += 1
+
+            # La distancia física de la rampa
+            # no incluye su penalización
+            distancia_fisica += DISTANCIA_RAMPA
+
+        else:
+
+            distancia_fisica += coste_tramo
+
+    return {
+        "distancia_fisica": distancia_fisica,
+        "coste_ponderado": coste_ponderado,
+        "numero_rampas": numero_rampas
+    }
+
+
 # ==========================================================
 # PROGRAMA DE PRUEBA para su evaluación
-# ==========================================================
-
-
-# ==========================================================
-# PROGRAMA DE PRUEBA para su testeo
 # ==========================================================
 
 if __name__ == "__main__":
@@ -223,14 +267,14 @@ if __name__ == "__main__":
     crear_mapa()
 
     print("\n===================================")
-    print("       IA PARK - TEST MAPA LÓGICO")
+    print("       IA PARK - MAPA LÓGICO")
     print("===================================")
 
     print(f"\nPlantas: {NUM_PLANTAS}")
     print(f"Plazas: {NUM_PLANTAS * PLAZAS_POR_PLANTA}")
     print(f"Nodos totales: {len(grafo)}")
 
-    # Calcular una sola vez las rutas desde la entrada
+    # Calcular las rutas desde la entrada
     distancias, anteriores = dijkstra(ENTRADA)
 
     while True:
@@ -243,12 +287,11 @@ if __name__ == "__main__":
 
         destino = input("\nPlaza: ").strip().upper()
 
-        # Salir del programa
         if destino == "SALIR":
             print("\nFinalizando IA Park...")
             break
 
-        # Permitir introducir 1, 01 o P01
+        # Aceptar P15, 15 o 015
         if destino.startswith("P"):
             destino = destino[1:]
 
@@ -259,18 +302,18 @@ if __name__ == "__main__":
         numero = int(destino)
 
         if not 1 <= numero <= NUM_PLANTAS * PLAZAS_POR_PLANTA:
-            print("\nERROR: La plaza debe estar entre P01 y P30.")
+            print("\nERROR: Plaza fuera de rango.")
             continue
 
         destino = f"P{numero:02d}"
 
-        # Obtener la ruta
+        # Reconstruir ruta óptima
         ruta = obtener_ruta(anteriores, destino)
 
-        # Coste del recorrido
-        coste = distancias[destino]
+        # Analizar distancia y penalizaciones
+        resultado = analizar_recorrido(ruta)
 
-        # Calcular la planta
+        # Identificar planta
         planta = (numero - 1) // PLAZAS_POR_PLANTA
 
         print("\n===================================")
@@ -279,7 +322,20 @@ if __name__ == "__main__":
 
         print(f"\nPlanta: {planta}")
 
-        print(f"Coste del recorrido: {coste:.1f}")
+        print(
+            f"Distancia física: "
+            f"{resultado['distancia_fisica']:.1f} metros"
+        )
+
+        print(
+            f"Coste ponderado: "
+            f"{resultado['coste_ponderado']:.1f}"
+        )
+
+        print(
+            f"Rampas recorridas: "
+            f"{resultado['numero_rampas']}"
+        )
 
         print("\nRuta recomendada:")
         print(" -> ".join(ruta))
